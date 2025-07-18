@@ -12,12 +12,14 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.observe
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.sunnyweather.android.MainActivity
 import com.sunnyweather.android.R
 import com.sunnyweather.android.databinding.FragmentPlaceBinding
 import com.sunnyweather.android.ui.weather.WeatherActivity
 
 class PlaceFragment : Fragment(){
-    lateinit var binding: FragmentPlaceBinding
+    private var _binding: FragmentPlaceBinding? = null
+    val binding get() = _binding!!
 
     val viewModel by lazy { ViewModelProvider(this).get(PlaceViewModel::class.java) }
 
@@ -28,13 +30,13 @@ class PlaceFragment : Fragment(){
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        binding = FragmentPlaceBinding.inflate(inflater, container, false)
+        _binding = FragmentPlaceBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        if(viewModel.isPlaceSaved()){
+        if(activity is MainActivity && viewModel.isPlaceSaved()){
             val place = viewModel.getSavedPlace()
             val intent = Intent(context, WeatherActivity::class.java).apply {
                 putExtra("location_lng", place.location.lng)
@@ -74,5 +76,10 @@ class PlaceFragment : Fragment(){
                 result.exceptionOrNull()?.printStackTrace()
             }
         })
+    }
+
+    override fun onDestroyView() {
+        _binding = null
+        super.onDestroyView()
     }
 }

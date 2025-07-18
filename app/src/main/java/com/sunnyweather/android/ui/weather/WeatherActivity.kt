@@ -1,16 +1,20 @@
 package com.sunnyweather.android.ui.weather
 
+import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.sunnyweather.android.R
@@ -20,18 +24,20 @@ import com.sunnyweather.android.databinding.LifeIndexBinding
 import com.sunnyweather.android.databinding.NowBinding
 import com.sunnyweather.android.logic.model.Weather
 import com.sunnyweather.android.logic.model.getSky
+import com.sunnyweather.android.ui.place.PlaceFragment
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 class WeatherActivity : AppCompatActivity() {
-    lateinit var binding: ActivityWeatherBinding
+    private var _binding: ActivityWeatherBinding? = null
+    val binding get() = _binding!!
     lateinit var nowBinding: NowBinding
     lateinit var forecastBinding: ForecastBinding
     lateinit var lifeIndexBinding: LifeIndexBinding
     val viewModel by lazy { ViewModelProvider(this).get(WeatherViewModel::class.java) }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityWeatherBinding.inflate(layoutInflater)
+        _binding = ActivityWeatherBinding.inflate(layoutInflater)
         val decorView = window.decorView
         decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -61,10 +67,42 @@ class WeatherActivity : AppCompatActivity() {
                 Toast.makeText(this,"无法获取天气信息", Toast.LENGTH_SHORT).show()
                 result.exceptionOrNull()?.printStackTrace()
             }
+            binding.swipeRefresh.isRefreshing = false
         })
-        viewModel.refreshWeather(viewModel.locationLng, viewModel.locationLat)
+        binding.swipeRefresh.setColorSchemeResources(R.color.colorPrimary)
+        refreshWeather()
+        binding.swipeRefresh.setOnRefreshListener {
+            refreshWeather()
+        }
+
+        nowBinding.navBtn.setOnClickListener {
+            binding.drawerLayout.openDrawer(GravityCompat.START)
+        }
+
+        binding.drawerLayout.addDrawerListener(object : DrawerLayout.DrawerListener{
+            override fun onDrawerClosed(drawerView: View) {
+                val manager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                manager.hideSoftInputFromWindow(drawerView.windowToken,
+                    InputMethodManager.HIDE_NOT_ALWAYS)
+                val fragment = supportFragmentManager.findFragmentById(R.id.placeFragment) as PlaceFragment
+                fragment.binding.searchPlaceEdit.text = null
+            }
+
+            override fun onDrawerOpened(drawerView: View) {
+            }
+
+            override fun onDrawerSlide(drawerView: View, slideOffset: Float) {
+            }
+
+            override fun onDrawerStateChanged(newState: Int) {
+            }
+        })
     }
 
+    fun refreshWeather(){
+        viewModel.refreshWeather(viewModel.locationLng,viewModel.locationLat)
+        binding.swipeRefresh.isRefreshing = true
+    }
     private fun showWeatherInfo(weather: Weather) {
         val placeName = binding.now.placeName
         val currentTemp = nowBinding.currentTemp
@@ -115,5 +153,10 @@ class WeatherActivity : AppCompatActivity() {
         ultravioletText.text = lifeIndex.ultraviolet[0].desc
         carWashingText.text = lifeIndex.carWashing[0].desc
         weatherLayout.visibility = View.VISIBLE
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        _binding = null
     }
 }
